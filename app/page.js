@@ -1,141 +1,295 @@
-import { seedChannel, workspaceStats } from "../lib/seed";
+import { appChrome, seedChannel } from "../lib/seed";
 
-function Badge({ children, tone = "neutral" }) {
-  return <span className={`badge badge-${tone}`}>{children}</span>;
+function IconBadge({ label, tone }) {
+  return <span className={`icon-badge icon-${tone}`}>{label}</span>;
 }
 
-function Panel({ title, children, className = "" }) {
+function Section({ title, action, children, className = "" }) {
   return (
     <section className={`panel ${className}`}>
-      <header className="panel-header">
+      <div className="panel-titlebar">
         <h2>{title}</h2>
-      </header>
+        {action ? <button className="ghost-btn">{action}</button> : null}
+      </div>
       {children}
     </section>
   );
 }
 
-function Message({ role, title, meta, children, tone }) {
+function AgentCard({ agent }) {
   return (
-    <article className="message">
-      <div className="message-top">
-        <div>
-          <h3>{title}</h3>
-          <p>{meta}</p>
-        </div>
-        <Badge tone={tone}>{role}</Badge>
+    <article className={`agent-card agent-${agent.tone}`}>
+      <div className="agent-icon">{agent.short}</div>
+      <div className="agent-copy">
+        <strong>{agent.name}</strong>
+        <span>{agent.role}</span>
       </div>
-      <div className="message-body">{children}</div>
     </article>
+  );
+}
+
+function DebateCard({ item }) {
+  return (
+    <article className={`debate-card debate-${item.tone}`}>
+      <div className="debate-head">
+        <div className="debate-persona">
+          <div className="debate-avatar">{item.avatar}</div>
+          <div>
+            <div className="debate-title">
+              <strong>{item.title}</strong>
+              <span className="ai-pill">AI</span>
+            </div>
+            <p>{item.subtitle}</p>
+          </div>
+        </div>
+        <div className="debate-meta">
+          <span>{item.time}</span>
+          <button className="ghost-icon">⋮</button>
+        </div>
+      </div>
+      <div className="debate-body">
+        {item.body.map((line) => (
+          <p key={line}>{line}</p>
+        ))}
+      </div>
+      <div className="debate-actions">
+        <button className="ghost-btn">👍 {item.likes}</button>
+        <button className="ghost-btn">👎</button>
+      </div>
+    </article>
+  );
+}
+
+function SettingRow({ label, value }) {
+  return (
+    <div className="setting-row">
+      <div className="setting-label">
+        <span className="setting-dot" />
+        <strong>{label}</strong>
+      </div>
+      <div className="setting-value">
+        <span>{value}</span>
+        <span className="chev">›</span>
+      </div>
+    </div>
   );
 }
 
 export default function Home() {
   return (
-    <main className="shell">
-      <aside className="rail left-rail">
-        <div className="brand">
-          <div className="brand-mark">M</div>
+    <main className="app-shell">
+      <aside className="left-rail">
+        <div className="brand-bar">
+          <div className="brand-mark">
+            <span className="brand-m">M</span>
+          </div>
           <div>
             <strong>Mizan</strong>
             <span>Decision Room</span>
           </div>
         </div>
 
-        <Panel title="Workspaces">
-          <div className="stack">
-            <div className="sidebar-item active">Career and Hiring</div>
-            <div className="sidebar-item">General Reasoning</div>
-            <div className="sidebar-item">Business</div>
-            <div className="sidebar-item">Finance</div>
+        <div className="rail-section">
+          <div className="rail-kicker">Workspace</div>
+          <div className="workspace-row">
+            <div className="workspace-icon">◫</div>
+            <div>
+              <strong>Mizan Workspace</strong>
+            </div>
+            <span className="chev">⌄</span>
           </div>
-        </Panel>
+        </div>
 
-        <Panel title="Channels">
-          <div className="stack">
-            <div className="sidebar-item active">#job-negotiation</div>
-            <div className="sidebar-item">#career-decisions</div>
-            <div className="sidebar-item">#offer-review</div>
+        <div className="rail-section">
+          <div className="rail-kicker with-plus">
+            <span>Channels</span>
+            <button className="ghost-icon">+</button>
           </div>
-        </Panel>
+          <div className="channel-list">
+            {appChrome.channels.map((channel) => (
+              <div key={channel} className={`channel-item ${channel === seedChannel.slug ? "active" : ""}`}>
+                <span className="hash">#</span>
+                <span>{channel}</span>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <Panel title="Active Agents">
-          <div className="stack compact">
-            <div className="agent-chip positive">Thesis</div>
-            <div className="agent-chip caution">Antithesis</div>
-            <div className="agent-chip verify">Evidence</div>
-            <div className="agent-chip judge">Judge</div>
+        <div className="rail-section">
+          <div className="rail-kicker">Active Agents</div>
+          <div className="agent-list">
+            {appChrome.agents.map((agent) => (
+              <AgentCard key={agent.name} agent={agent} />
+            ))}
           </div>
-        </Panel>
+        </div>
+
+        <div className="status-card">
+          <span className="status-dot" />
+          <div>
+            <strong>System Online</strong>
+            <p>All agents operational</p>
+          </div>
+          <svg viewBox="0 0 80 20" aria-hidden="true">
+            <path d="M0 14h8l4-8 4 10 5-14 7 12 5-4 4 6 5-10 6 8 4-6 4 2 5-4 4 8 6-2" />
+          </svg>
+        </div>
+
+        <div className="profile-card">
+          <div className="avatar-circle">ZK</div>
+          <div>
+            <strong>Zuhaib Khan</strong>
+            <p>Pro Plan</p>
+          </div>
+          <span className="chev">›</span>
+        </div>
       </aside>
 
-      <section className="main">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">Seeded debate</p>
-            <h1>{seedChannel.topic}</h1>
+      <section className="main-stage">
+        <header className="top-nav">
+          <div className="channel-switcher">
+            <strong>#{seedChannel.slug}</strong>
+            <span className="chev">⌄</span>
           </div>
-          <div className="topbar-actions">
-            <button>Pause</button>
-            <button>Stop</button>
-            <button className="primary">Export</button>
+
+          <nav className="tab-nav" aria-label="Primary">
+            {["Debate", "Evidence", "Analytics", "History"].map((item, index) => (
+              <a key={item} className={index === 0 ? "tab active" : "tab"} href="#">
+                {item}
+                {item === "Evidence" ? <span className="tab-pill">12</span> : null}
+              </a>
+            ))}
+          </nav>
+
+          <div className="top-actions">
+            <label className="search-box">
+              <span>⌕</span>
+              <input type="text" defaultValue="" placeholder="Search..." aria-label="Search" />
+              <kbd>⌘K</kbd>
+            </label>
+            <button className="ghost-icon">🔔</button>
+            <button className="ghost-icon">?</button>
+            <div className="avatar-pill">ZK</div>
           </div>
         </header>
 
         <div className="content-grid">
-          <div className="feed">
-            <Panel title="Live Debate">
-              <div className="stack message-stack">
-                {seedChannel.messages.map((message) => (
-                  <Message
-                    key={message.id}
-                    role={message.role}
-                    title={message.title}
-                    meta={message.meta}
-                    tone={message.tone}
-                  >
-                    {message.body.map((line) => (
-                      <p key={line}>{line}</p>
-                    ))}
-                  </Message>
-                ))}
+          <div className="center-column">
+            <div className="topic-card">
+              <div className="topic-hash">#</div>
+              <div className="topic-copy">
+                <h1>{seedChannel.topic}</h1>
+                <div className="topic-meta">
+                  <IconBadge label="● Live" tone="live" />
+                  <span>Round 2 of 3</span>
+                  <span>⏱ {seedChannel.elapsed}</span>
+                  <span>4 Agents</span>
+                  <span className="tiny-icons">
+                    <span>⚖</span>
+                    <span>🛡</span>
+                    <span>⚡</span>
+                    <span>◌</span>
+                  </span>
+                </div>
               </div>
-            </Panel>
+              <div className="topic-actions">
+                <button className="ghost-icon">☆</button>
+                <button className="ghost-icon">↗</button>
+                <button className="ghost-icon">⋮</button>
+              </div>
+            </div>
+
+            <div className="debate-stack">
+              {seedChannel.debate.map((item) => (
+                <DebateCard key={item.title} item={item} />
+              ))}
+            </div>
+
+            <div className="composer-card">
+              <div className="composer-input">
+                Enter a topic, job offer, or decision prompt...
+              </div>
+              <div className="composer-row">
+                <button className="ghost-btn plus-btn">＋</button>
+                <button className="ghost-btn">Templates ▾</button>
+                <div className="composer-tools">
+                  <button className="ghost-btn">🎙 Voice ▾</button>
+                  <button className="ghost-btn">🌐 English ▾</button>
+                  <button className="start-btn">▶ Start Debate</button>
+                </div>
+              </div>
+              <div className="footer-actions">
+                <button className="footer-btn">⏸ Pause</button>
+                <button className="footer-btn danger">■ Stop Debate</button>
+                <button className="footer-btn">⇩ Export ▾</button>
+              </div>
+            </div>
           </div>
 
-          <div className="summary-rail">
-            <Panel title="Decision Summary">
+          <aside className="right-column">
+            <Section title="Debate Settings" action="⚙">
+              <div className="settings-list">
+                {appChrome.settings.map((setting) => (
+                  <SettingRow key={setting.label} {...setting} />
+                ))}
+              </div>
+              <button className="settings-btn">✎ Edit Settings</button>
+            </Section>
+
+            <Section title="Decision Summary">
               <div className="summary-card">
-                <Badge tone="judge">{seedChannel.verdict}</Badge>
-                <strong>{seedChannel.headline}</strong>
-                <p>{seedChannel.reason}</p>
-              </div>
-              <div className="metric-grid">
-                {workspaceStats.map((item) => (
-                  <div key={item.label} className="metric">
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
+                <div className="summary-head">
+                  <div className="summary-label">
+                    <IconBadge label="⚖" tone="summary" />
+                    <strong>Current Lean</strong>
                   </div>
-                ))}
+                  <span className="lean-pill">Lean Yes</span>
+                </div>
+                <p>{seedChannel.summary}</p>
+                <div className="confidence-row">
+                  <strong>Confidence</strong>
+                  <span>72%</span>
+                </div>
+                <div className="confidence-bar">
+                  <span />
+                </div>
               </div>
-            </Panel>
 
-            <Panel title="Missing Information">
-              <ul className="list">
-                {seedChannel.missingInformation.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </Panel>
-
-            <Panel title="Next Action">
-              <p>{seedChannel.nextAction}</p>
-              <div className="callout">
-                <strong>Do not disclose:</strong>
-                <p>{seedChannel.doNotDisclose}</p>
+              <div className="summary-group">
+                <h3>Key Risks</h3>
+                <ul>
+                  {seedChannel.risks.map((risk) => (
+                    <li key={risk}>
+                      <span className="warn-triangle">⚠</span>
+                      {risk}
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </Panel>
-          </div>
+
+              <div className="summary-group">
+                <h3>What's Missing</h3>
+                <ul>
+                  {seedChannel.missingInformation.map((item) => (
+                    <li key={item}>
+                      <span className="info-circle">?</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="next-step-card">
+                <div className="next-step-title">
+                  <span>→</span>
+                  <strong>Next Step</strong>
+                </div>
+                <p>{seedChannel.nextAction}</p>
+              </div>
+
+              <button className="analysis-btn">View Full Analysis ›</button>
+            </Section>
+          </aside>
         </div>
       </section>
     </main>
