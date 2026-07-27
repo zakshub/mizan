@@ -1,7 +1,11 @@
 .next
+out
 node_modules
 coverage
 .env
 .env.local
 .DS_Store
 *.log
+inspect_*.py
+read_attachment.py
+sync_to_target.py

@@ -6,62 +6,60 @@
 - Branch: `staging`
 - Workflow: `.github/workflows/deploy.yml`
 
-## Tumhe Kya Karna Hai
+## One-time setup
 
-1. VPS par login karo.
-2. Staging aur production folders banao.
-3. SSH public key VPS me add karo.
-4. GitHub me staging secrets add karo.
-5. Staging branch push hone do.
-6. Browser me staging URL check karo.
+1. Hestia `user` account me deployment public key authorize karo.
+2. GitHub `staging` environment me required secrets rakho.
+3. Us ke baad har deployment one-command aur automatic hai.
 
 ## Required GitHub Secrets
 
 - `DEPLOY_HOST`
 - `DEPLOY_USER`
 - `DEPLOY_PATH`
-- `DEPLOY_SSH_KEY`
+- `DEPLOY_SSH_KEY_B64` preferred
+- `DEPLOY_SSH_KEY` fallback if you keep the raw OpenSSH private key
 
 ## Expected flow
 
 1. Push to `staging`.
 2. GitHub Actions runs tests and build.
-3. Release archive is uploaded to the VPS.
-4. VPS extracts the release into `current/`.
-5. Docker Compose restarts the app.
+3. Static release archive is uploaded to the VPS.
+4. VPS publishes it to the domain's `public_html`.
+5. GitHub Actions opens the HTTPS domain and verifies `Mizan` is present.
 
-## VPS Folder Commands
+## Staging command
 
-Run these on the VPS after SSH login:
+Run from the project folder on local Windows:
 
-```bash
-mkdir -p /var/www/mizan/staging/current
-mkdir -p /var/www/mizan/staging/incoming
-mkdir -p /var/www/mizan/staging/shared
-
-mkdir -p /var/www/mizan/production/current
-mkdir -p /var/www/mizan/production/incoming
-mkdir -p /var/www/mizan/production/shared
-```
-
-If you only want staging right now:
-
-```bash
-mkdir -p /var/www/mizan/staging/{current,incoming,shared}
+```powershell
+npm run release:staging -- -Message "Describe the change"
 ```
 
 ## SSH Key
 
 - Local machine par `C:\Users\ESHOP\.ssh\mizan_vps` private key hoti hai.
 - Local machine par `C:\Users\ESHOP\.ssh\mizan_vps.pub` public key hoti hai.
-- Public key VPS ke `/root/.ssh/authorized_keys` me jati hai.
-- Private key GitHub secret `DEPLOY_SSH_KEY` me jati hai.
+- Public key Hestia ke `user` account me authorize hoti hai.
+- Private key GitHub secret `DEPLOY_SSH_KEY_B64` me base64 string ki form me jati hai.
+- Agar raw key use karni ho to `DEPLOY_SSH_KEY` me poori OpenSSH private key paste hoti hai.
+
+## Generate Secret Value
+
+PowerShell me ye chalao:
+
+```powershell
+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content -Raw $env:USERPROFILE\.ssh\mizan_vps)))
+```
+
+Jo single-line output aaye, usko `DEPLOY_SSH_KEY_B64` me paste karo.
 
 ## Verification
 
 - `https://staging.mizan.zuhaib.pro`
 - `npm test` passes in the repo.
 - `npm run build` passes in the repo.
+- GitHub Actions `Deploy` workflow is green.
 
 ## What should be visible
 

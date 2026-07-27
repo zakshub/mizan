@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "test": "node --test tests/seed.test.mjs"
+    "test": "node --test tests/seed.test.mjs",
+    "release:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Target staging",
+    "release:production": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Target production"
   },
   "dependencies": {
     "next": "^16.2.11",

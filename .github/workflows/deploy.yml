@@ -15,31 +15,97 @@ on:
           - staging
           - production
 
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.event_name == 'workflow_dispatch' && inputs.target || github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.target || github.ref_name == 'main' && 'production' || 'staging' }}
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_URL: ${{ ((github.event_name == 'workflow_dispatch' && inputs.target == 'production') || github.ref_name == 'main') && 'https://mizan.zuhaib.pro' || 'https://staging.mizan.zuhaib.pro' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm install
-      - run: npm test
-      - run: npm run build
+      - name: Install dependencies
+        run: npm ci
+      - name: Run tests
+        run: npm test
+      - name: Build static site
+        run: npm run build
       - name: Prepare release archive
-        run: tar -czf mizan-release.tgz app lib tests package.json package-lock.json next.config.mjs Dockerfile docker-compose.yml .env.example README.md
-      - name: Load SSH key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
-      - name: Trust host
-        run: ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
-      - name: Upload release
-        run: scp mizan-release.tgz "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}/mizan-release.tgz"
-      - name: Deploy on VPS
-        env:
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: tar -czf mizan-release.tgz -C out .
+      - name: Validate deployment settings
         run: |
-          ssh "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "set -e; cd '${DEPLOY_PATH}'; rm -rf current incoming; mkdir -p incoming current; tar -xzf mizan-release.tgz -C incoming; mv incoming/* current/; cd current; printf '%s\n' 'NODE_ENV=production' 'PORT=3000' 'NEXT_PUBLIC_APP_NAME=Mizan Decision Room' > .env.production; docker compose down || true; docker compose up -d --build"
+          test -n "$DEPLOY_HOST" || { echo "Missing DEPLOY_HOST"; exit 1; }
+          test -n "$DEPLOY_USER" || { echo "Missing DEPLOY_USER"; exit 1; }
+          test -n "$DEPLOY_PATH" || { echo "Missing DEPLOY_PATH"; exit 1; }
+          case "$DEPLOY_PATH" in
+            /home/*/web/*.zuhaib.pro) ;;
+            *) echo "DEPLOY_PATH must be a Hestia domain root under /home/<user>/web/<domain>"; exit 1 ;;
+          esac
+      - name: Prepare SSH key
+        env:
+          DEPLOY_SSH_KEY_B64: ${{ secrets.DEPLOY_SSH_KEY_B64 }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          if [ -n "$DEPLOY_SSH_KEY_B64" ]; then
+            printf '%s' "$DEPLOY_SSH_KEY_B64" | tr -d '\r\n' | base64 -d > ~/.ssh/deploy_key
+          elif [ -n "$DEPLOY_SSH_KEY" ]; then
+            printf '%s' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          else
+            echo "Missing DEPLOY_SSH_KEY_B64 or DEPLOY_SSH_KEY" >&2
+            exit 1
+          fi
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null
+      - name: Trust host
+        run: ssh-keyscan -T 15 -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+      - name: Upload release
+        run: scp -i ~/.ssh/deploy_key mizan-release.tgz "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/mizan-release.tgz"
+      - name: Publish to Hestia public_html
+        run: |
+          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" "bash -s -- '$DEPLOY_PATH'" <<'REMOTE'
+          set -eu
+          deploy_path="$1"
+          case "$deploy_path" in
+            /home/*/web/*.zuhaib.pro) ;;
+            *) echo "Unsafe deployment path: $deploy_path" >&2; exit 1 ;;
+          esac
+
+          public_dir="$deploy_path/public_html"
+          release_dir="$deploy_path/mizan-release-next"
+          test -d "$public_dir"
+
+          rm -rf "$release_dir"
+          mkdir -p "$release_dir"
+          tar -xzf "$deploy_path/mizan-release.tgz" -C "$release_dir"
+          find "$public_dir" -mindepth 1 -maxdepth 1 ! -name '.well-known' -exec rm -rf -- {} +
+          cp -a "$release_dir"/. "$public_dir"/
+          rm -rf "$release_dir"
+          rm -f "$deploy_path/mizan-release.tgz"
+          REMOTE
+      - name: Verify deployed site
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error --max-time 20 "$DEPLOY_URL" | grep -q "Mizan"; then
+              echo "Deployment verified: $DEPLOY_URL"
+              exit 0
+            fi
+            echo "Waiting for $DEPLOY_URL (attempt $attempt/5)"
+            sleep 5
+          done
+          echo "Deployment smoke test failed: $DEPLOY_URL" >&2
+          exit 1
