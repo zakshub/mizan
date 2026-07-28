@@ -1,15 +1,11 @@
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("staging", "production")]
-  [string]$Target,
-
-  [Parameter(Mandatory = $true)]
   [string]$Message
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$expectedBranch = if ($Target -eq "production") { "main" } else { "staging" }
+$expectedBranch = "staging"
 
 function Invoke-Checked {
   param(
@@ -34,7 +30,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($currentBranch -ne $expectedBranch) {
-  throw "Target '$Target' must be released from branch '$expectedBranch'. Current branch is '$currentBranch'."
+  throw "Staging releases must be pushed from branch '$expectedBranch'. Current branch is '$currentBranch'."
 }
 
 Invoke-Checked npm.cmd test
@@ -52,4 +48,4 @@ if ($diffExitCode -eq 1) {
 Invoke-Checked git push --set-upstream origin $expectedBranch
 
 Write-Host ""
-Write-Host "Release pushed to '$expectedBranch'. GitHub Actions will deploy '$Target'."
+Write-Host "Release pushed to '$expectedBranch'. GitHub Actions will deploy staging only."
