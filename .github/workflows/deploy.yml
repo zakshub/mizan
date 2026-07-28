@@ -65,7 +65,17 @@ jobs:
           import base64
           import os
           import re
+          import textwrap
           from pathlib import Path
+
+          def wrap_openssh_payload(payload):
+              encoded_payload = base64.b64encode(payload).decode()
+              body = "\n".join(textwrap.wrap(encoded_payload, width=70))
+              return (
+                  "-----BEGIN OPENSSH PRIVATE KEY-----\n"
+                  f"{body}\n"
+                  "-----END OPENSSH PRIVATE KEY-----\n"
+              ).encode()
 
           encoded = os.environ.get("DEPLOY_SSH_KEY_B64", "").strip()
           raw = os.environ.get("DEPLOY_SSH_KEY", "").replace("\r", "").strip()
@@ -85,6 +95,17 @@ jobs:
               key = (raw + "\n").encode()
           else:
               raise SystemExit("Missing DEPLOY_SSH_KEY_B64 or DEPLOY_SSH_KEY")
+
+          if key.startswith(b"openssh-key-v1\0"):
+              key = wrap_openssh_payload(key)
+          elif re.fullmatch(rb"[A-Za-z0-9+/=_\-\s]+", key.strip()):
+              nested = base64.b64decode(
+                  re.sub(rb"\s+", b"", key.strip()) + b"===",
+                  altchars=b"-_",
+                  validate=False,
+              )
+              if nested.startswith(b"openssh-key-v1\0"):
+                  key = wrap_openssh_payload(nested)
 
           if not key.startswith(b"-----BEGIN OPENSSH PRIVATE KEY-----"):
               raise SystemExit("Decoded secret is not an OpenSSH private key")
