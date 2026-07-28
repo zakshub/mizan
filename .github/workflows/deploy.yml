@@ -30,7 +30,7 @@ jobs:
       DEPLOY_HOST: 187.77.207.96
       DEPLOY_USER: user
       DEPLOY_PATH: ${{ ((github.event_name == 'workflow_dispatch' && inputs.target == 'production') || github.ref_name == 'main') && '/home/user/web/mizan.zuhaib.pro' || '/home/user/web/staging.mizan.zuhaib.pro' }}
-      DEPLOY_URL: ${{ ((github.event_name == 'workflow_dispatch' && inputs.target == 'production') || github.ref_name == 'main') && 'https://mizan.zuhaib.pro' || 'https://staging.mizan.zuhaib.pro' }}
+      DEPLOY_URL: ${{ ((github.event_name == 'workflow_dispatch' && inputs.target == 'production') || github.ref_name == 'main') && 'https://mizan.zuhaib.pro' || 'http://staging.mizan.zuhaib.pro' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -138,13 +138,20 @@ jobs:
           PY
           chmod 600 ~/.ssh/deploy_key
           ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null
-      - name: Trust host
-        run: ssh-keyscan -T 15 -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
       - name: Upload release
-        run: scp -i ~/.ssh/deploy_key mizan-release.tgz "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/mizan-release.tgz"
+        run: |
+          scp \
+            -o StrictHostKeyChecking=accept-new \
+            -i ~/.ssh/deploy_key \
+            mizan-release.tgz \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/mizan-release.tgz"
       - name: Publish to Hestia public_html
         run: |
-          ssh -i ~/.ssh/deploy_key "$DEPLOY_USER@$DEPLOY_HOST" "bash -s -- '$DEPLOY_PATH'" <<'REMOTE'
+          ssh \
+            -o StrictHostKeyChecking=accept-new \
+            -i ~/.ssh/deploy_key \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "bash -s -- '$DEPLOY_PATH'" <<'REMOTE'
           set -eu
           deploy_path="$1"
           case "$deploy_path" in
