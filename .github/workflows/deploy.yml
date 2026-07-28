@@ -95,9 +95,11 @@ jobs:
               except Exception:
                   return None
 
-          def find_private_key(*secret_values):
+          def find_private_keys(*secret_values):
               queue = []
               seen = set()
+              private_keys = []
+              private_key_set = set()
 
               for secret_value in secret_values:
                   value = extract_assigned_value(secret_value)
@@ -115,29 +117,59 @@ jobs:
                   end = candidate.find(end_marker)
                   if begin >= 0 and end > begin:
                       end += len(end_marker)
-                      return candidate[begin:end] + b"\n"
+                      private_key = candidate[begin:end] + b"\n"
+                      if private_key not in private_key_set:
+                          private_keys.append(private_key)
+                          private_key_set.add(private_key)
+                      continue
 
                   if candidate.startswith(b"openssh-key-v1\0"):
-                      return wrap_openssh_payload(candidate)
+                      private_key = wrap_openssh_payload(candidate)
+                      if private_key not in private_key_set:
+                          private_keys.append(private_key)
+                          private_key_set.add(private_key)
+                      continue
 
                   if depth < 3:
                       decoded = decode_base64(candidate)
                       if decoded:
                           queue.append((decoded, depth + 1))
 
-              return None
+              return private_keys
 
-          key = find_private_key(
+          keys = find_private_keys(
               os.environ.get("DEPLOY_SSH_KEY_B64", ""),
               os.environ.get("DEPLOY_SSH_KEY", ""),
           )
-          if key is None:
+          if not keys:
               raise SystemExit("No valid OpenSSH private key found in deployment secrets")
 
-          Path.home().joinpath(".ssh", "deploy_key").write_bytes(key)
+          ssh_dir = Path.home().joinpath(".ssh")
+          for index, key in enumerate(keys):
+              ssh_dir.joinpath(f"deploy_key_{index}").write_bytes(key)
           PY
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null
+          chmod 600 ~/.ssh/deploy_key_*
+          for candidate in ~/.ssh/deploy_key_*; do
+            ssh-keygen -y -f "$candidate" > /dev/null
+          done
+      - name: Select authorized SSH key
+        run: |
+          for candidate in ~/.ssh/deploy_key_*; do
+            echo "Trying $(ssh-keygen -lf "$candidate" -E sha256 | awk '{print $2}')"
+            if ssh \
+              -o BatchMode=yes \
+              -o PasswordAuthentication=no \
+              -o StrictHostKeyChecking=accept-new \
+              -i "$candidate" \
+              "$DEPLOY_USER@$DEPLOY_HOST" \
+              "true"; then
+              cp "$candidate" ~/.ssh/deploy_key
+              echo "Authorized deployment key selected."
+              exit 0
+            fi
+          done
+          echo "None of the configured deployment keys is authorized for $DEPLOY_USER@$DEPLOY_HOST" >&2
+          exit 1
       - name: Upload release
         run: |
           scp \
