@@ -27,9 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.target || github.ref_name == 'main' && 'production' || 'staging' }}
     env:
-      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_HOST: 187.77.207.96
+      DEPLOY_USER: user
+      DEPLOY_PATH: ${{ ((github.event_name == 'workflow_dispatch' && inputs.target == 'production') || github.ref_name == 'main') && '/home/user/web/mizan.zuhaib.pro' || '/home/user/web/staging.mizan.zuhaib.pro' }}
       DEPLOY_URL: ${{ ((github.event_name == 'workflow_dispatch' && inputs.target == 'production') || github.ref_name == 'main') && 'https://mizan.zuhaib.pro' || 'https://staging.mizan.zuhaib.pro' }}
     steps:
       - uses: actions/checkout@v4

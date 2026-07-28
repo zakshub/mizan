@@ -14,11 +14,10 @@
 
 ## Required GitHub Secrets
 
-- `DEPLOY_HOST`
-- `DEPLOY_USER`
-- `DEPLOY_PATH`
 - `DEPLOY_SSH_KEY_B64` preferred
 - `DEPLOY_SSH_KEY` fallback if you keep the raw OpenSSH private key
+
+Host, user, domain path, and URL are selected automatically from the branch.
 
 ## Expected flow
 

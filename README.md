@@ -51,16 +51,13 @@ commit to its matching Hestia domain and verifies the page over HTTPS.
 
 ## GitHub Actions secrets
 
-- `DEPLOY_HOST`
-- `DEPLOY_USER`
-- `DEPLOY_PATH`
 - `DEPLOY_SSH_KEY_B64`
 - `DEPLOY_SSH_KEY` optional fallback
 
-Environment-specific values:
+Branch-specific deployment values are configured in the workflow:
 
-- Staging `DEPLOY_PATH`: `/home/user/web/staging.mizan.zuhaib.pro`
-- Production `DEPLOY_PATH`: `/home/user/web/mizan.zuhaib.pro`
+- Staging: `user@187.77.207.96:/home/user/web/staging.mizan.zuhaib.pro`
+- Production: `user@187.77.207.96:/home/user/web/mizan.zuhaib.pro`
 
 ## Notes
 
