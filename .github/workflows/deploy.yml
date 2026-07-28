@@ -61,14 +61,36 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          if [ -n "$DEPLOY_SSH_KEY_B64" ]; then
-            printf '%s' "$DEPLOY_SSH_KEY_B64" | tr -d '\r\n' | base64 -d > ~/.ssh/deploy_key
-          elif [ -n "$DEPLOY_SSH_KEY" ]; then
-            printf '%s' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-          else
-            echo "Missing DEPLOY_SSH_KEY_B64 or DEPLOY_SSH_KEY" >&2
-            exit 1
-          fi
+          python3 <<'PY'
+          import base64
+          import os
+          import re
+          from pathlib import Path
+
+          encoded = os.environ.get("DEPLOY_SSH_KEY_B64", "").strip()
+          raw = os.environ.get("DEPLOY_SSH_KEY", "").replace("\r", "").strip()
+
+          if encoded:
+              if encoded.startswith("DEPLOY_SSH_KEY_B64="):
+                  encoded = encoded.split("=", 1)[1]
+              encoded = re.sub(r"\s+", "", encoded)
+              encoded += "=" * (-len(encoded) % 4)
+              try:
+                  key = base64.b64decode(encoded, altchars=b"-_", validate=False)
+              except Exception as error:
+                  raise SystemExit(f"Unable to decode DEPLOY_SSH_KEY_B64: {error}")
+          elif raw:
+              if raw.startswith("DEPLOY_SSH_KEY="):
+                  raw = raw.split("=", 1)[1].strip()
+              key = (raw + "\n").encode()
+          else:
+              raise SystemExit("Missing DEPLOY_SSH_KEY_B64 or DEPLOY_SSH_KEY")
+
+          if not key.startswith(b"-----BEGIN OPENSSH PRIVATE KEY-----"):
+              raise SystemExit("Decoded secret is not an OpenSSH private key")
+
+          Path.home().joinpath(".ssh", "deploy_key").write_bytes(key)
+          PY
           chmod 600 ~/.ssh/deploy_key
           ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null
       - name: Trust host
