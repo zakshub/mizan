@@ -34,8 +34,6 @@ jobs:
         run: npm test
       - name: Build static site
         run: npm run build
-      - name: Prepare release archive
-        run: tar -czf mizan-release.tgz -C out .
       - name: Validate deployment settings
         run: |
           test -n "$DEPLOY_HOST" || { echo "Missing DEPLOY_HOST"; exit 1; }
@@ -147,53 +145,30 @@ jobs:
         run: |
           for candidate in ~/.ssh/deploy_key_*; do
             echo "Trying $(ssh-keygen -lf "$candidate" -E sha256 | awk '{print $2}')"
-            if ssh \
+            if printf 'quit\n' | sftp \
+              -q \
+              -b - \
               -o BatchMode=yes \
               -o PasswordAuthentication=no \
               -o StrictHostKeyChecking=accept-new \
               -i "$candidate" \
-              "$DEPLOY_USER@$DEPLOY_HOST" \
-              "true"; then
+              "$DEPLOY_USER@$DEPLOY_HOST"; then
               cp "$candidate" ~/.ssh/deploy_key
-              echo "Authorized deployment key selected."
+              echo "Authorized SFTP deployment key selected."
               exit 0
             fi
           done
           echo "None of the configured deployment keys is authorized for $DEPLOY_USER@$DEPLOY_HOST" >&2
           exit 1
-      - name: Upload release
+      - name: Publish static site over SFTP
         run: |
           scp \
+            -r \
+            -p \
             -o StrictHostKeyChecking=accept-new \
             -i ~/.ssh/deploy_key \
-            mizan-release.tgz \
-            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/mizan-release.tgz"
-      - name: Publish to Hestia public_html
-        run: |
-          ssh \
-            -o StrictHostKeyChecking=accept-new \
-            -i ~/.ssh/deploy_key \
-            "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash -s -- '$DEPLOY_PATH'" <<'REMOTE'
-          set -eu
-          deploy_path="$1"
-          case "$deploy_path" in
-            /home/*/web/*.zuhaib.pro) ;;
-            *) echo "Unsafe deployment path: $deploy_path" >&2; exit 1 ;;
-          esac
-
-          public_dir="$deploy_path/public_html"
-          release_dir="$deploy_path/mizan-release-next"
-          test -d "$public_dir"
-
-          rm -rf "$release_dir"
-          mkdir -p "$release_dir"
-          tar -xzf "$deploy_path/mizan-release.tgz" -C "$release_dir"
-          find "$public_dir" -mindepth 1 -maxdepth 1 ! -name '.well-known' -exec rm -rf -- {} +
-          cp -a "$release_dir"/. "$public_dir"/
-          rm -rf "$release_dir"
-          rm -f "$deploy_path/mizan-release.tgz"
-          REMOTE
+            out/. \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/public_html/"
       - name: Verify deployed site
         run: |
           for attempt in 1 2 3 4 5; do
