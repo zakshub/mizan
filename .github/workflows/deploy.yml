@@ -77,38 +77,62 @@ jobs:
                   "-----END OPENSSH PRIVATE KEY-----\n"
               ).encode()
 
-          encoded = os.environ.get("DEPLOY_SSH_KEY_B64", "").strip()
-          raw = os.environ.get("DEPLOY_SSH_KEY", "").replace("\r", "").strip()
+          def extract_assigned_value(value):
+              value = value.replace("\r", "").strip()
+              for marker in ("DEPLOY_SSH_KEY_B64=", "DEPLOY_SSH_KEY="):
+                  if marker in value:
+                      value = value.split(marker, 1)[1].splitlines()[0].strip()
+                      break
+              return value.strip("'\"")
 
-          if encoded:
-              if encoded.startswith("DEPLOY_SSH_KEY_B64="):
-                  encoded = encoded.split("=", 1)[1]
-              encoded = re.sub(r"\s+", "", encoded)
-              encoded += "=" * (-len(encoded) % 4)
+          def decode_base64(value):
+              compact = re.sub(rb"\s+", b"", value)
+              if not compact or not re.fullmatch(rb"[A-Za-z0-9+/=_\-]+", compact):
+                  return None
+              compact += b"=" * (-len(compact) % 4)
               try:
-                  key = base64.b64decode(encoded, altchars=b"-_", validate=False)
-              except Exception as error:
-                  raise SystemExit(f"Unable to decode DEPLOY_SSH_KEY_B64: {error}")
-          elif raw:
-              if raw.startswith("DEPLOY_SSH_KEY="):
-                  raw = raw.split("=", 1)[1].strip()
-              key = (raw + "\n").encode()
-          else:
-              raise SystemExit("Missing DEPLOY_SSH_KEY_B64 or DEPLOY_SSH_KEY")
+                  return base64.b64decode(compact, altchars=b"-_", validate=False)
+              except Exception:
+                  return None
 
-          if key.startswith(b"openssh-key-v1\0"):
-              key = wrap_openssh_payload(key)
-          elif re.fullmatch(rb"[A-Za-z0-9+/=_\-\s]+", key.strip()):
-              nested = base64.b64decode(
-                  re.sub(rb"\s+", b"", key.strip()) + b"===",
-                  altchars=b"-_",
-                  validate=False,
-              )
-              if nested.startswith(b"openssh-key-v1\0"):
-                  key = wrap_openssh_payload(nested)
+          def find_private_key(*secret_values):
+              queue = []
+              seen = set()
 
-          if not key.startswith(b"-----BEGIN OPENSSH PRIVATE KEY-----"):
-              raise SystemExit("Decoded secret is not an OpenSSH private key")
+              for secret_value in secret_values:
+                  value = extract_assigned_value(secret_value)
+                  if value:
+                      queue.append((value.encode(), 0))
+
+              while queue:
+                  candidate, depth = queue.pop(0)
+                  if candidate in seen:
+                      continue
+                  seen.add(candidate)
+
+                  begin = candidate.find(b"-----BEGIN OPENSSH PRIVATE KEY-----")
+                  end_marker = b"-----END OPENSSH PRIVATE KEY-----"
+                  end = candidate.find(end_marker)
+                  if begin >= 0 and end > begin:
+                      end += len(end_marker)
+                      return candidate[begin:end] + b"\n"
+
+                  if candidate.startswith(b"openssh-key-v1\0"):
+                      return wrap_openssh_payload(candidate)
+
+                  if depth < 3:
+                      decoded = decode_base64(candidate)
+                      if decoded:
+                          queue.append((decoded, depth + 1))
+
+              return None
+
+          key = find_private_key(
+              os.environ.get("DEPLOY_SSH_KEY_B64", ""),
+              os.environ.get("DEPLOY_SSH_KEY", ""),
+          )
+          if key is None:
+              raise SystemExit("No valid OpenSSH private key found in deployment secrets")
 
           Path.home().joinpath(".ssh", "deploy_key").write_bytes(key)
           PY
