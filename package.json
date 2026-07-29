@@ -8,6 +8,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "test": "node --test tests/seed.test.mjs",
+    "test:browser": "node scripts/browser-smoke.mjs",
     "release:staging": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1"
   },
   "dependencies": {

@@ -25,7 +25,7 @@ Host, user, domain path, and URL are selected automatically from the branch.
 2. GitHub Actions runs tests and build.
 3. Static release archive is uploaded to the VPS.
 4. VPS publishes it to the domain's `public_html`.
-5. GitHub Actions opens the HTTPS domain and verifies `Mizan` is present.
+5. GitHub Actions opens the staging URL and verifies `Mizan` is present.
 
 ## Staging command
 
@@ -56,6 +56,7 @@ Jo single-line output aaye, usko `DEPLOY_SSH_KEY_B64` me paste karo.
 ## Verification
 
 - `https://staging.mizan.zuhaib.pro`
+- `http://staging.mizan.zuhaib.pro` is the current workflow smoke-test URL.
 - `npm test` passes in the repo.
 - `npm run build` passes in the repo.
 - GitHub Actions `Deploy` workflow is green.

@@ -62,6 +62,12 @@ button:hover {
   border-color: #c8d3e4;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
+}
+
 .app-shell {
   min-height: 100vh;
   display: grid;
@@ -175,6 +181,8 @@ button:hover {
 }
 
 .channel-item {
+  width: 100%;
+  justify-content: flex-start;
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -192,6 +200,10 @@ button:hover {
   background: linear-gradient(90deg, rgba(31, 187, 122, 0.12), rgba(31, 187, 122, 0.08));
   color: var(--text);
   font-weight: 700;
+}
+
+.channel-item.active .hash {
+  color: var(--green);
 }
 
 .agent-list {
@@ -440,6 +452,49 @@ button:hover {
   grid-template-columns: minmax(0, 1.75fr) 360px;
 }
 
+.control-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.control {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.control span {
+  color: #6a7890;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.control select,
+.control.toggle {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  padding: 0.7rem 0.8rem;
+}
+
+.control.toggle {
+  text-align: left;
+}
+
+.control.toggle.on {
+  border-color: rgba(31, 187, 122, 0.35);
+  background: rgba(31, 187, 122, 0.08);
+}
+
 .center-column {
   min-width: 0;
   padding: 1rem 1rem 1rem 1.1rem;
@@ -665,14 +720,14 @@ button:hover {
 }
 
 .composer-input {
+  width: 100%;
   min-height: 60px;
-  display: flex;
-  align-items: center;
   padding: 0.9rem 1rem;
   border-radius: 14px;
   background: #f9fbfe;
   color: #8c97a8;
   border: 1px solid #e3eaf3;
+  resize: vertical;
 }
 
 .composer-row {
@@ -709,6 +764,7 @@ button:hover {
   display: flex;
   justify-content: center;
   gap: 0.8rem;
+  flex-wrap: wrap;
 }
 
 .footer-btn {
@@ -729,6 +785,71 @@ button:hover {
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
+}
+
+.runtime-panel {
+  margin-bottom: 0.25rem;
+}
+
+.runtime-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.runtime-meta > div,
+.runtime-turn,
+.runtime-history-item {
+  padding: 0.85rem;
+  border-radius: 14px;
+  background: #f9fbfe;
+  border: 1px solid #e3eaf3;
+}
+
+.runtime-label {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #70809a;
+  margin-bottom: 0.35rem;
+}
+
+.runtime-turn {
+  margin-top: 0.7rem;
+}
+
+.runtime-turn p,
+.runtime-history-item p {
+  margin: 0;
+  color: #405169;
+  line-height: 1.6;
+}
+
+.runtime-history {
+  margin-top: 0.85rem;
+}
+
+.runtime-history-list {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.45rem;
+  max-height: 240px;
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
+.runtime-history-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.runtime-history-head span {
+  color: #7c879a;
+  font-size: 0.82rem;
 }
 
 .panel-titlebar {
@@ -753,11 +874,20 @@ button:hover {
 }
 
 .setting-row {
+  width: 100%;
   display: flex;
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.65rem 0.1rem;
   border-bottom: 1px solid var(--line);
+}
+
+.setting-row-button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  box-shadow: none;
 }
 
 .setting-row:last-child {
@@ -954,6 +1084,14 @@ button:hover {
   .right-column {
     background: transparent;
   }
+
+  .control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .runtime-meta {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -982,5 +1120,9 @@ button:hover {
 
   .debate-actions {
     justify-content: flex-start;
+  }
+
+  .control-grid {
+    grid-template-columns: 1fr;
   }
 }

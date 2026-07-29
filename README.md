@@ -2,6 +2,14 @@
 
 Source-of-truth implementation for the Mizan decision-support platform.
 
+## What this repo does now
+
+- Single-page decision room with the seeded job-negotiation scenario.
+- Draft, running, paused, clarifying, and completed debate states.
+- Local persistence through `localStorage`.
+- Markdown and JSON export from the live runtime state.
+- Staging-only static deploy through GitHub Actions.
+
 ## Local development
 
 Project folder:
@@ -26,41 +34,28 @@ npm test
 npm run build
 ```
 
-The static production build is written to `out/`.
+The static export is written to `out/`.
 
-## Automated release
+## Staging release
 
-Staging, from the `staging` branch:
+Only staging is wired right now.
 
 ```powershell
 npm run release:staging -- -Message "Describe the change"
 ```
 
-Production, from the `main` branch:
+GitHub Actions then builds the static export and deploys it to:
 
-```powershell
-npm run release:production -- -Message "Describe the release"
-```
-
-Each release command runs tests, creates the static build, commits pending
-changes, and pushes the matching branch. GitHub Actions then deploys the exact
-commit to its matching Hestia domain and verifies the page over HTTPS.
-
-- `staging` -> `https://staging.mizan.zuhaib.pro`
-- `main` -> `https://mizan.zuhaib.pro`
+- `https://staging.mizan.zuhaib.pro`
 
 ## GitHub Actions secrets
 
-- `DEPLOY_SSH_KEY_B64`
-- `DEPLOY_SSH_KEY` optional fallback
+- `DEPLOY_SSH_KEY_B64` preferred
+- `DEPLOY_SSH_KEY` fallback if you paste the raw OpenSSH private key
 
-Branch-specific deployment values are configured in the workflow:
-
-- Staging: `user@187.77.207.96:/home/user/web/staging.mizan.zuhaib.pro`
-- Production: `user@187.77.207.96:/home/user/web/mizan.zuhaib.pro`
+The workflow expects the Hestia `user` account to already trust the matching public key.
 
 ## Notes
 
-- The current scaffold is a seeded decision-room shell built from the master PDF spec.
-- The deployed app is a static export served directly from Hestia `public_html`.
-- GitHub Actions and VPS deployment wiring use environment secrets, not hard-coded credentials.
+- The app is intentionally client-side so the runtime can persist locally before staging deployment.
+- Production wiring is not active in this repo.
