@@ -59,6 +59,7 @@ Jo single-line output aaye, usko `DEPLOY_SSH_KEY_B64` me paste karo.
 - `http://staging.mizan.zuhaib.pro` is the current workflow smoke-test URL.
 - `npm test` passes in the repo.
 - `npm run build` passes in the repo.
+- `npm run test:browser -- https://staging.mizan.zuhaib.pro` passes against staging.
 - GitHub Actions `Deploy` workflow is green.
 
 ## What should be visible

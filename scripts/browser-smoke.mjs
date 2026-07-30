@@ -11,6 +11,7 @@ const chromeCandidates = [
 ];
 
 const browserPath = chromeCandidates.find(existsSync);
+const targetUrl = process.argv[2] || "http://localhost:3000";
 
 if (!browserPath) {
   throw new Error("Chrome or Edge was not found.");
@@ -54,7 +55,7 @@ let socket;
 try {
   const port = await waitForDevTools();
   const targetResponse = await fetch(
-    `http://127.0.0.1:${port}/json/new?${encodeURIComponent("http://localhost:3000")}`,
+    `http://127.0.0.1:${port}/json/new?${encodeURIComponent(targetUrl)}`,
     { method: "PUT" },
   );
   const target = await targetResponse.json();
