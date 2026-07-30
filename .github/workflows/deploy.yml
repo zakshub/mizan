@@ -145,30 +145,34 @@ jobs:
         run: |
           for candidate in ~/.ssh/deploy_key_*; do
             echo "Trying $(ssh-keygen -lf "$candidate" -E sha256 | awk '{print $2}')"
-            if printf 'quit\n' | sftp \
-              -q \
-              -b - \
+            if ssh \
+              -T \
               -o BatchMode=yes \
+              -o ConnectTimeout=15 \
               -o PasswordAuthentication=no \
               -o StrictHostKeyChecking=accept-new \
               -i "$candidate" \
-              "$DEPLOY_USER@$DEPLOY_HOST"; then
+              "$DEPLOY_USER@$DEPLOY_HOST" \
+              "true"; then
               cp "$candidate" ~/.ssh/deploy_key
-              echo "Authorized SFTP deployment key selected."
+              echo "Authorized SSH deployment key selected."
               exit 0
             fi
           done
           echo "None of the configured deployment keys is authorized for $DEPLOY_USER@$DEPLOY_HOST" >&2
           exit 1
-      - name: Publish static site over SFTP
+      - name: Publish static site over SSH
         run: |
-          scp \
-            -r \
-            -p \
+          set -o pipefail
+          tar -C out -czf - . | ssh \
+            -T \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            -o PasswordAuthentication=no \
             -o StrictHostKeyChecking=accept-new \
             -i ~/.ssh/deploy_key \
-            out/. \
-            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/public_html/"
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "tar -xzf - -C '$DEPLOY_PATH/public_html'"
       - name: Verify deployed site
         run: |
           for attempt in 1 2 3 4 5; do

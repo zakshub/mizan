@@ -23,7 +23,7 @@ Host, user, domain path, and URL are selected automatically from the branch.
 
 1. Push to `staging`.
 2. GitHub Actions runs tests and build.
-3. Static release archive is uploaded to the VPS.
+3. Static release archive is streamed to the VPS over SSH.
 4. VPS publishes it to the domain's `public_html`.
 5. GitHub Actions opens the staging URL and verifies `Mizan` is present.
 
